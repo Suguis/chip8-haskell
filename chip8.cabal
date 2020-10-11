@@ -21,3 +21,5 @@ executable chip8
                      , sdl2
                      , bytestring
                      , split
+  other-modules:       Dbg
+                       Rom
