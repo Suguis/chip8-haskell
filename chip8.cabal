@@ -21,5 +21,9 @@ executable chip8
                      , sdl2
                      , bytestring
                      , split
+                     , vector
+                     , linear
+
   other-modules:       Dbg
                        Rom
+                       Machine
