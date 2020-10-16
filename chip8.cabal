@@ -23,7 +23,9 @@ executable chip8
                      , split
                      , vector
                      , linear
+                     , digits
 
   other-modules:       Dbg
                        Rom
                        Machine
+                       Render

@@ -1,7 +1,6 @@
 module Machine where
 
 import qualified Data.Vector.Storable as V
-import Foreign.C.Types
 import SDL.Vect
 import GHC.Word
 
@@ -18,6 +17,3 @@ newMachine = Machine
   { activePixels = V.fromList $ map (V2 1) [1..10]
   , memory = V.replicate 0x1000 0
   }
-
-activePixelsSDL :: Machine -> V.Vector (Point V2 CInt)
-activePixelsSDL m = V.map (\(V2 x y) -> P $ V2 (fromIntegral x) (fromIntegral y)) . activePixels $ m
