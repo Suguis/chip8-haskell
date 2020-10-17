@@ -9,8 +9,9 @@ main :: IO ()
 main = do
   -- Debugging rom instructions
   let file = "roms/pong.ch8"
-  print . stringRom =<< loadRom file
+--  print . stringRom =<< loadRom file
 
-  let m = newMachine
+  m <- newMachine <$> loadRom file
   r <- mainRenderer
+  print m
   mainLoop r m

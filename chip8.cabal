@@ -24,6 +24,7 @@ executable chip8
                      , vector
                      , linear
                      , digits
+                     , lens
 
   other-modules:       Dbg
                        Rom
