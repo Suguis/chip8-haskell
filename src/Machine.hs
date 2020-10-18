@@ -17,7 +17,7 @@ data Machine = Machine
   { _activePixels :: V.Vector (V2 Int)
   , _memory       :: V.Vector Word8
   , _registers    :: V.Vector Word8
-  , _pc           :: Int
+  , _pc           :: Word16
   , _stack        :: [Word16]
   , _delay        :: Int
   , _sound        :: Int
@@ -57,13 +57,66 @@ nextCycle m = nm
 
 fetchInstruction :: Machine -> Word16
 fetchInstruction m = a .|. b `shift` 8
-  where a = fromIntegral $ (m ^. memory) V.! (m ^. pc)
-        b = fromIntegral $ (m ^. memory) V.! (m ^. pc + 1)
+  where a = fromIntegral $ (m ^. memory) V.! fromIntegral (m ^. pc)
+        b = fromIntegral $ (m ^. memory) V.! fromIntegral (m ^. pc + 1)
 
+writeRegister :: Machine -> Int -> Word8 -> Machine
+writeRegister m i v = m & registers .~ V.fromList (V.toList (m ^. registers) & element i .~ v)
+
+readRegister :: Machine -> Int -> Word8
+readRegister m i = (m ^. registers) V.! i
 
 runInstruction :: Machine -> Instruction -> Machine
 runInstruction m 0x00e0 = error "0x00e0"
 runInstruction m 0x00ee = error "0x00ee"
 runInstruction m i = case digits 16 i of
-  [1,_,_,_] -> error "Jump to address nnn"
+  [1,_,_,_] -> m & pc .~ (i .&. 0x0fff)
+
+  [2,_,_,_] -> m & stack .~ (m ^. pc):(m ^. stack)
+
+  [3,x,_,_] -> if readRegister m x' == nn then m & pc +~ 2 else m
+    where nn = fromIntegral $ i .&. 0x00ff
+          x' = fromIntegral x
+
+  [4,x,_,_] -> if readRegister m x' /= nn then m & pc +~ 2 else m
+    where nn = fromIntegral $ i .&. 0x00ff
+          x' = fromIntegral x
+
+  [5,x,y,0] -> if x == y then m & pc +~ 2 else m
+
+  [6,x,_,_] -> writeRegister m x' nn
+    where nn = fromIntegral $ i .&. 0x00ff
+          x' = fromIntegral x
+
+  [7,x,_,_] -> writeRegister m x' (readRegister m x' + nn)
+    where nn = fromIntegral $ i .&. 0x00ff
+          x' = fromIntegral x
+
+  [8,x,y,0] -> writeRegister m x' vy
+    where x' = fromIntegral x
+          vy = readRegister m $ fromIntegral y
+
+  [8,x,y,1] -> writeRegister m x' (vx .|. vy)
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+
+  [8,x,y,2] -> writeRegister m x' (vx .&. vy)
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+
+  [8,x,y,3] -> writeRegister m x' (vx `xor` vy)
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+
+  [8,x,y,4] -> writeRegister (writeRegister m x' res) 0xf
+                $ if hasCarry then 1 else readRegister m 0xf
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+          res = vx + vy
+          hasCarry = res < vx
+
   x         -> error $ "Unimplemented instruction" ++ show x

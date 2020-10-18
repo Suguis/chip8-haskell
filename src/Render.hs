@@ -8,6 +8,7 @@ import Foreign.C.Types
 import SDL
 import Control.Monad (unless)
 import Control.Lens
+import Numeric (showHex)
 
 mainLoop :: Renderer -> Machine -> IO ()
 mainLoop r m = do
@@ -22,7 +23,9 @@ mainLoop r m = do
   rendererDrawColor r $= V4 255 255 255 255
   drawPoints r $ activePixelsSDL m
   present r
+  print $ showHex (fetchInstruction m) ""
   let nm = nextCycle m
+
   unless qPressed (mainLoop r nm)
 
 activePixelsSDL :: Machine -> V.Vector (Point V2 CInt)
