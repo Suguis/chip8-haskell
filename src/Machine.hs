@@ -30,7 +30,7 @@ instance Show Machine where
   show m = "Machine {\n"
     ++ "activePixels = " ++ show (m ^. activePixels) ++ "\n"
     ++ "memory = " ++ show (map (`showHex` "") $ V.toList $ m ^. memory) ++ "\n"
-    ++ "registers = " ++ show (map (`showHex` "") $ V.toList $ m ^. memory) ++ "\n"
+    ++ "registers = " ++ show (map (`showHex` "") $ V.toList $ m ^. registers) ++ "\n"
     ++ "pc = " ++ show (m ^. pc) ++ "\n"
     ++ "stack = " ++ show (map (`showHex` "") $ m ^. stack) ++ "\n"
     ++ "delay = " ++ show (m ^. delay) ++ "\n"
@@ -43,7 +43,7 @@ screenSize = V2 64 32
 newMachine :: Rom -> Machine
 newMachine r = Machine
   { _activePixels = V.fromList $ map (V2 1) [1..10]
-  , _memory    = V.replicate 0x1ff 0 V.++ V.fromList r
+  , _memory    = V.replicate 0x200 0 V.++ V.fromList r
   , _registers = V.replicate 16 0
   , _pc        = 0x0200
   , _ireg      = 0
@@ -58,7 +58,7 @@ nextCycle m = nm
         nm = runInstruction m i & pc +~ 2
 
 fetchInstruction :: Machine -> Word16
-fetchInstruction m = a .|. b `shift` 8
+fetchInstruction m = b .|. a `shift` 8
   where a = fromIntegral $ (m ^. memory) V.! fromIntegral (m ^. pc)
         b = fromIntegral $ (m ^. memory) V.! fromIntegral (m ^. pc + 1)
 
