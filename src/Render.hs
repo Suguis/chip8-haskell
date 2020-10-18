@@ -26,7 +26,7 @@ mainLoop r m = do
   unless qPressed (mainLoop r nm)
 
 activePixelsSDL :: Machine -> V.Vector (Point V2 CInt)
-activePixelsSDL = V.map (\(V2 x y) -> P $ V2 (fromIntegral x) (fromIntegral y)) . view activePixels
+activePixelsSDL = V.map (\(V2 x y) -> P $ V2 (fromIntegral x) (fromIntegral y)) . (^. activePixels)
 
 renderWindow :: IO Window
 renderWindow = createWindow "CHIP-8" WindowConfig

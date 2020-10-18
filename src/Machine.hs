@@ -27,13 +27,13 @@ makeLenses ''Machine
 
 instance Show Machine where
   show m = "Machine {\n"
-    ++ "activePixels = " ++ show (view activePixels m) ++ "\n"
-    ++ "memory = " ++ show (map (`showHex` "") $ V.toList $ view memory m) ++ "\n"
-    ++ "registers = " ++ show (map (`showHex` "") $ V.toList $ view registers m) ++ "\n"
-    ++ "pc = " ++ show (view pc m) ++ "\n"
-    ++ "stack = " ++ show (map (`showHex` "") $ view stack m) ++ "\n"
-    ++ "delay = " ++ show (view delay m) ++ "\n"
-    ++ "sound = " ++ show (view sound m) ++ "\n"
+    ++ "activePixels = " ++ show (m ^. activePixels) ++ "\n"
+    ++ "memory = " ++ show (map (`showHex` "") $ V.toList $ m ^. memory) ++ "\n"
+    ++ "registers = " ++ show (map (`showHex` "") $ V.toList $ m ^. memory) ++ "\n"
+    ++ "pc = " ++ show (m ^. pc) ++ "\n"
+    ++ "stack = " ++ show (map (`showHex` "") $ m ^. stack) ++ "\n"
+    ++ "delay = " ++ show (m ^. delay) ++ "\n"
+    ++ "sound = " ++ show (m ^. sound) ++ "\n"
     ++ "}"
 
 screenSize :: V2 Int
@@ -53,12 +53,12 @@ newMachine r = Machine
 nextCycle :: Machine -> Machine
 nextCycle m = nm
   where i  = fetchInstruction m
-        nm = set pc (view pc m + 2) $ runInstruction m i
+        nm = runInstruction m i & pc +~ 2
 
 fetchInstruction :: Machine -> Word16
 fetchInstruction m = a .|. b `shift` 8
-  where a = fromIntegral $ view memory m V.! view pc m :: Word16
-        b = fromIntegral $ view memory m V.! (view pc m + 1) :: Word16
+  where a = fromIntegral $ (m ^. memory) V.! (m ^. pc)
+        b = fromIntegral $ (m ^. memory) V.! (m ^. pc + 1)
 
 
 runInstruction :: Machine -> Instruction -> Machine
