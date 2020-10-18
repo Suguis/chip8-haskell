@@ -75,7 +75,7 @@ runInstruction m 0x00ee = (m & pc .~ dir) & stack .~ st
 runInstruction m i = case digits 16 i of
   [1,_,_,_] -> m & pc .~ (i .&. 0x0fff)
 
-  [2,_,_,_] -> m & stack .~ (m ^. pc):(m ^. stack)
+  [2,_,_,_] -> (m & stack .~ (m ^. pc):(m ^. stack)) & pc .~ (0x0fff .&. i) - 2
 
   [3,x,_,_] -> if readRegister m x' == nn then m & pc +~ 2 else m
     where nn = fromIntegral $ i .&. 0x00ff
