@@ -18,9 +18,10 @@ data Machine = Machine
   , _memory       :: V.Vector Word8
   , _registers    :: V.Vector Word8
   , _pc           :: Word16
+  , _ireg         :: Word16
   , _stack        :: [Word16]
-  , _delay        :: Int
-  , _sound        :: Int
+  , _delay        :: Word8
+  , _sound        :: Word8
   }
 
 makeLenses ''Machine
@@ -45,6 +46,7 @@ newMachine r = Machine
   , _memory    = V.replicate 0x1ff 0 V.++ V.fromList r
   , _registers = V.replicate 16 0
   , _pc        = 0x0200
+  , _ireg      = 0
   , _stack     = []
   , _delay     = 0
   , _sound     = 0
@@ -67,8 +69,9 @@ readRegister :: Machine -> Int -> Word8
 readRegister m i = (m ^. registers) V.! i
 
 runInstruction :: Machine -> Instruction -> Machine
-runInstruction m 0x00e0 = error "0x00e0"
-runInstruction m 0x00ee = error "0x00ee"
+runInstruction m 0x00e0 = m
+runInstruction m 0x00ee = (m & pc .~ dir) & stack .~ st
+  where dir:st = m ^. stack
 runInstruction m i = case digits 16 i of
   [1,_,_,_] -> m & pc .~ (i .&. 0x0fff)
 
@@ -112,11 +115,67 @@ runInstruction m i = case digits 16 i of
           vy = readRegister m $ fromIntegral y
 
   [8,x,y,4] -> writeRegister (writeRegister m x' res) 0xf
-                $ if hasCarry then 1 else readRegister m 0xf
+                $ if hasCarry then 1 else 0
     where x' = fromIntegral x
           vx = readRegister m x'
           vy = readRegister m $ fromIntegral y
           res = vx + vy
           hasCarry = res < vx
+
+  [8,x,y,5] -> writeRegister (writeRegister m x' res) 0xf
+                $ if hasBorrow then 0 else 1
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+          res = vx - vy
+          hasBorrow = res > vx
+
+  [8,x,_,6] -> writeRegister (writeRegister m x' res) 0xf nvf
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          nvf = 0x01 .&. vx
+          res = vx `shift` (-1)
+
+  [8,x,y,7] -> writeRegister (writeRegister m x' res) 0xf
+                $ if hasBorrow then 0 else 1
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          vy = readRegister m $ fromIntegral y
+          res = vy - vx
+          hasBorrow = res > vy
+
+  [8,x,_,0xe] -> writeRegister (writeRegister m x' res) 0xf nvf
+    where x' = fromIntegral x
+          vx = readRegister m x'
+          nvf = vx `shift` (-7)
+          res = vx `shift` 1
+
+  [9,x,y,0] -> if x /= y then m & pc +~ 2 else m
+
+  [0xa,_,_,_] -> m & ireg .~ 0x0fff .|. i
+
+  [0xb,_,_,_] -> m & pc .~ (0x0fff .|. i) + fromIntegral ((m ^. registers) V.! 0)
+
+  [0xc,x,_,_] -> writeRegister m x' rand
+    where x' = fromIntegral x
+          rand = 42
+
+  [0xd,x,y,n] -> m
+
+  [0xe,x,9,0xe] -> m
+
+  [0xe,x,0xa,1] -> m
+
+  [0xf,x,0,7] -> writeRegister m (fromIntegral x) (m ^. delay)
+
+  [0xf,x,0,0xa] -> m
+
+  [0xf,x,1,5] -> m & delay .~ readRegister m (fromIntegral x)
+
+  [0xf,x,1,8] -> m & sound .~ readRegister m (fromIntegral x)
+
+  [0xf,x,1,0xe] -> m & ireg +~ fromIntegral (readRegister m (fromIntegral x))
+
+  [0xf,x,2,9] -> m
 
   x         -> error $ "Unimplemented instruction" ++ show x
